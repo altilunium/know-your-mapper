@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Know Your Mapper</title>
+   <link rel="icon" href="https://pbs.twimg.com/profile_images/1716831335724326912/8ujZJHcJ_400x400.jpg" type="image/x-icon" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{color-scheme:light;--ink:#202a35;--muted:#667381;--line:#dce3e9;--paper:#fff;--bg:#f3f6f8;--blue:#176b87;--blue2:#e6f3f7;--green:#24724c;--red:#a12b2b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1050px;margin:0 auto;padding:28px 18px 60px}.top{margin-bottom:22px}.eyebrow{color:var(--blue);font-size:12px;font-weight:750;letter-spacing:.12em;text-transform:uppercase}h1{font-size:clamp(27px,4vw,38px);line-height:1.15;margin:7px 0 10px;letter-spacing:-.04em}p{margin:6px 0;color:var(--muted)}.panel{background:var(--paper);border:1px solid var(--line);border-radius:15px;padding:18px;margin:15px 0;box-shadow:0 3px 12px #1d33400a}
+form{display:grid;grid-template-columns:minmax(0,1fr) 135px auto;gap:10px;align-items:end}label{display:block;font-size:12px;font-weight:750;color:#465463;margin-bottom:6px}input,select,button{font:inherit;border-radius:9px;min-height:42px}input,select{width:100%;border:1px solid #cbd5dd;padding:9px 11px;background:white;color:var(--ink)}button{border:0;background:var(--blue);color:white;padding:9px 15px;font-weight:700;cursor:pointer}button.secondary{background:white;color:var(--blue);border:1px solid #b8d1da}button:disabled{opacity:.55;cursor:wait}.controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.controls>div{min-width:150px;flex:1}.status{font-size:13px;margin-top:12px;min-height:20px}.status.error{color:var(--red)}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.stat{border:1px solid var(--line);border-radius:11px;padding:12px}.stat strong{display:block;font-size:24px;letter-spacing:-.03em}.stat span{color:var(--muted);font-size:12px}.section-title{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin:24px 0 10px}.section-title h2{font-size:20px;letter-spacing:-.025em;margin:0}.section-title small{color:var(--muted)}
+.cluster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
+.cluster{background:white;border:1px solid var(--line);border-radius:13px;padding:15px;display:flex;flex-direction:column;justify-content:space-between}.cluster-head{display:flex;gap:12px;justify-content:space-between;align-items:start}.cluster h3{font-size:15px;margin:0 0 4px}.cluster .sub{font-size:13px;color:var(--muted)}.pill{display:inline-block;font-size:11px;font-weight:750;border-radius:99px;background:var(--blue2);color:var(--blue);padding:4px 8px;white-space:nowrap}.ids{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}.ids a,.changeset a{color:var(--blue);text-decoration:none}.ids a{font-size:12px;border:1px solid var(--line);padding:3px 7px;border-radius:6px}.ids a:hover,.changeset a:hover{text-decoration:underline}
+.global-map{height:380px;border-radius:12px;border:1px solid var(--line);margin-bottom:15px}
+.cluster-marker{width:26px;height:26px;border-radius:50%;border:2px solid #fff;color:#fff;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,0.3)}
+.changeset{background:white;border:1px solid var(--line);border-radius:12px;padding:14px;margin:9px 0}.change-top{display:flex;justify-content:space-between;gap:10px;align-items:start}.time{font-weight:750;font-size:13px;white-space:nowrap}.comment{font-size:16px;font-weight:700;margin:8px 0}.meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;margin-top:10px}.meta div{min-width:0}.meta dt{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:750}.meta dd{margin:2px 0 0;overflow-wrap:anywhere}.counts{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.count{border:1px solid var(--line);border-radius:7px;padding:4px 8px;font-size:12px}.empty{padding:26px;text-align:center;color:var(--muted);border:1px dashed #cbd5dd;border-radius:12px}.foot{font-size:12px;color:var(--muted);margin-top:18px}.hidden{display:none!important}
+.cs-map{height:240px;border-radius:8px;margin-top:12px;border:1px solid var(--line)}
+.detail-box{margin-top:12px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--line);font-size:13px}
+.element-flex-container{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.element-card{padding:8px 10px;border-radius:6px;border:1px solid rgba(0,0,0,0.1);font-size:12px;max-width:280px;word-break:break-all}
+.action-create{background-color:#d4edda;border-color:#c3e6cb;color:#155724}
+.action-modify{background-color:#fff3cd;border-color:#ffeeba;color:#856404}
+.action-delete{background-color:#f8d7da;border-color:#f5c6cb;color:#721c24}
+.el-id{font-size:10px;font-weight:700;opacity:0.85;margin-bottom:2px;text-transform:uppercase}
+.el-tags{font-family:monospace;font-size:11px;line-height:1.4}
+@media(max-width:640px){main{padding:20px 12px 40px}form{grid-template-columns:1fr 1fr}form .name{grid-column:1/-1}form button{grid-column:1/-1}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.meta{grid-template-columns:1fr}.change-top{align-items:start;flex-direction:column}.time{white-space:normal}.panel{padding:14px}}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div class="eyebrow">OpenStreetMap</div>
+    <h1>Know Your Mapper</h1>
+    <p>Explore a mapper’s editing sessions, metadata, and approximate places of activity.</p>
+  </header>
+
+  <section class="panel">
+    <form id="searchForm">
+      <div class="name"><label for="username">OSM username</label><input id="username" name="username" placeholder="" required autocomplete="off"></div>
+      <div><label for="threshold">Cluster distance</label><select id="threshold"><option value="75000" selected>75 kilometres</option></select></div>
+      <button id="searchBtn" type="submit">Load changesets</button>
+    </form>
+    <div id="status" class="status" role="status">Enter an OSM username to begin. The app uses the public OSM API and interactive maps.</div>
+  </section>
+
+  <section id="summary" class="panel hidden">
+    <div class="stats">
+      <div class="stat"><strong id="totalCount">0</strong><span>Changesets loaded</span></div>
+      <div class="stat"><strong id="clusterCount">0</strong><span>Approximate clusters</span></div>
+      <div class="stat"><strong id="editCount">0</strong><span>Element changes reported</span></div>
+      <div class="stat"><strong id="dateRange">—</strong><span>Date range</span></div>
+    </div>
+  </section>
+
+  <section id="clustersSection" class="hidden">
+    <div class="section-title"><h2>Places of activity</h2><small id="clusterNote"></small></div>
+    <div id="clusterMap" class="global-map"></div>
+    <div id="clusters" class="cluster-grid"></div>
+  </section>
+
+  <section id="changesSection" class="hidden">
+    <div class="section-title">
+      <h2>Changesets</h2>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <select id="clusterFilter" style="font-size:12px;min-height:34px;padding:4px 10px;border-radius:6px;border:1px solid #cbd5dd;">
+          <option value="all">All clusters</option>
+        </select>
+        <small id="listNote"></small>
+      </div>
+    </div>
+    <div id="changesets"></div>
+    <button id="loadMore" class="secondary" type="button">Load older changesets</button>
+  </section>
+
+  <p class="foot">Location clusters are estimates based on changeset bounding-box centres, not exact edit locations. Reverse geocoding can be triggered manually via buttons on each cluster card. Created, modified, and deleted counts are shown when provided by the API.</p>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const state = { user:'', uid:null, items:[], seen:new Set(), clusters:[], loading:false, oldest:null, cursorEnd:null, addressCache:new Map(), globalMap:null, clusterMarkers:[], changesetMaps:{}, changesetLayers:{} };
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const attr = esc;
+  function status(message, error=false){ $('status').textContent=message; $('status').className='status'+(error?' error':''); }
+  function fmtExact(value){
+    const d=new Date(value); if(Number.isNaN(d.getTime())) return value || 'Unknown time';
+    const day=d.getDate(), month=d.toLocaleString('en-GB',{month:'long'}), year=d.getFullYear();
+    let h=d.getHours(), m=String(d.getMinutes()).padStart(2,'0'), s=String(d.getSeconds()).padStart(2,'0');
+    const ap=h>=12?'pm':'am'; h=h%12||12;
+    return `${day} ${month} ${year}, ${h}.${m}.${s}${ap}`;
+  }
+  function relative(value){
+    const t=Date.parse(value); if(!Number.isFinite(t)) return 'Unknown time';
+    const delta=Math.round((t-Date.now())/1000), abs=Math.abs(delta);
+    const units=[['year',31536000],['month',2592000],['week',604800],['day',86400],['hour',3600],['minute',60],['second',1]];
+    for(const [name,size] of units){ if(abs>=size || name==='second'){const n=Math.round(abs/size);return delta>=0?`in ${n} ${name}${n===1?'':'s'}`:`${n} ${name}${n===1?'':'s'} ago`;}}
+  }
+  function humanDate(value){ if(!value)return '—'; return new Date(value).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+  function num(v){return Number.isFinite(Number(v))?Number(v):0;}
+  function tag(tags, keys){
+    if(!tags) return '';
+    for(const k of keys){ if(tags[k]!==undefined && tags[k]!==null && String(tags[k]).trim()) return String(tags[k]); }
+    return '';
+  }
+  function normalize(raw){
+    const tags=raw.tags || {};
+    const bbox = raw.min_lat!=null && raw.min_lon!=null && raw.max_lat!=null && raw.max_lon!=null
+      ? {minLat:+raw.min_lat,minLon:+raw.min_lon,maxLat:+raw.max_lat,maxLon:+raw.max_lon} : null;
+    const center=bbox ? {lat:(bbox.minLat+bbox.maxLat)/2,lon:(bbox.minLon+bbox.maxLon)/2} : null;
+    return {
+      id:String(raw.id), uid:raw.uid ?? null, user:raw.user || state.user,
+      created:raw.created_at || '', closed:raw.closed_at || raw.created_at || '',
+      open:!!raw.open, changes:num(raw.changes_count), tags, bbox, center,
+      createdCount:raw.created_count != null ? num(raw.created_count) : null,
+      modifiedCount:raw.modified_count != null ? num(raw.modified_count) : null,
+      deletedCount:raw.deleted_count != null ? num(raw.deleted_count) : null,
+      comment:tag(tags,['comment']) || '(no comment)',
+      createdBy:tag(tags,['created_by','created by']),
+      source:tag(tags,['source']),
+      host:tag(tags,['host']),
+      imagery:tag(tags,['imagery_used','imagery','imagery:source','background']),
+      clusterIndex: null,
+      raw
+    };
+  }
+  async function api(url){
+    const r=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(!r.ok) throw new Error(`Request failed (${r.status})`);
+    return r.json();
+  }
+  function haversine(a,b){
+    const rad=x=>x*Math.PI/180, dLat=rad(b.lat-a.lat), dLon=rad(b.lon-a.lon);
+    const x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+    return 6371000*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+  }
+  function buildClusters(){
+    const threshold=Number($('threshold').value);
+    const ordered=[...state.items].filter(x=>x.center).sort((a,b)=>Date.parse(b.created)-Date.parse(a.created));
+    const clusters=[];
+    for(const cs of ordered){
+      let best=null, bestD=Infinity;
+      for(const c of clusters){
+        const d=haversine(cs.center,c.center);
+        if(d<=threshold && d<bestD){best=c;bestD=d;}
+      }
+      if(!best){clusters.push({center:{...cs.center}, members:[cs], latSum:cs.center.lat,lonSum:cs.center.lon});}
+      else{
+        best.members.push(cs); best.latSum+=cs.center.lat;best.lonSum+=cs.center.lon;
+        best.center={lat:best.latSum/best.members.length,lon:best.lonSum/best.members.length};
+      }
+    }
+    clusters.sort((a, b) => b.members.length - a.members.length);
+    
+    state.items.forEach(cs => cs.clusterIndex = null);
+    clusters.forEach((c,i)=>{
+      c.index=i+1;
+      c.members.sort((a,b)=>Date.parse(b.created)-Date.parse(a.created));
+      c.count=c.members.length;
+      c.addressKey=`${c.center.lat.toFixed(4)},${c.center.lon.toFixed(4)}`;
+      c.members.forEach(m => m.clusterIndex = c.index);
+    });
+    state.clusters=clusters;
+    renderClusterFilterOptions();
+  }
+  function renderClusterFilterOptions(){
+    const select = $('clusterFilter');
+    const currentVal = select.value;
+    select.innerHTML = '<option value="all">All clusters</option>';
+    state.clusters.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.index;
+      opt.textContent = `Cluster ${c.index} (${c.count})`;
+      select.appendChild(opt);
+    });
+    select.value = [...select.options].some(o => o.value === currentVal) ? currentVal : 'all';
+  }
+  async function fetchPhotonAddress(lat, lon, key, btnEl, titleEl){
+    btnEl.disabled = true;
+    btnEl.textContent = 'Looking up address...';
+    try{
+      const url=`https://photon.komoot.io/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&limit=1`;
+      const data=await api(url), f=data.features?.[0], p=f?.properties||{};
+      const parts=[p.name,p.street,p.housenumber,p.district,p.city,p.town,p.village,p.county,p.state,p.country].filter(Boolean);
+      const address=[...new Set(parts)].join(', ') || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      state.addressCache.set(key, address);
+      titleEl.textContent = `Cluster #${titleEl.dataset.index}: ${address}`;
+      btnEl.remove();
+      updateGlobalMapMarkers();
+    }catch(e){
+      btnEl.disabled = false;
+      btnEl.textContent = 'Retry address lookup';
+      status(`Geocoding error: ${e.message}`, true);
+    }
+  }
+  function renderSummary(){
+    $('summary').classList.remove('hidden');$('totalCount').textContent=state.items.length.toLocaleString();
+    $('clusterCount').textContent=state.clusters.length.toLocaleString();$('editCount').textContent=state.items.reduce((s,x)=>s+x.changes,0).toLocaleString();
+    const dates=state.items.map(x=>Date.parse(x.created)).filter(Number.isFinite);
+    $('dateRange').textContent=dates.length?`${humanDate(new Date(Math.min(...dates)).toISOString())} – ${humanDate(new Date(Math.max(...dates)).toISOString())}`:'—';
+  }
+  function initGlobalMap(){
+    if(state.globalMap) return;
+    state.globalMap = L.map('clusterMap').setView([20,0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(state.globalMap);
+  }
+  function HSVtoRGB(h, s, v) {
+    let r, g, b, i, f, p, q, t;
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+      case 0: r = v; g = t; b = p; break;
+      case 1: r = q; g = v; b = p; break;
+      case 2: r = p; g = v; b = t; break;
+      case 3: r = p; g = q; b = v; break;
+      case 4: r = t; g = p; b = v; break;
+      case 5: r = v; g = p; b = q; break;
+    }
+    return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+  }
+  function updateGlobalMapMarkers(){
+    initGlobalMap();
+    state.clusterMarkers.forEach(m => m.remove());
+    state.clusterMarkers = [];
+    const bounds = [];
+    
+    const changesetAmounts = state.clusters.map(c => c.count);
+    const minVal = changesetAmounts.length ? Math.min(...changesetAmounts) : 0;
+    const maxVal = changesetAmounts.length ? Math.max(...changesetAmounts) : 1;
+    const gap = maxVal - minVal;
+
+    for (let i = state.clusters.length - 1; i >= 0; i--) {
+      const c = state.clusters[i];
+      const cachedAddr = state.addressCache.get(c.addressKey) || `${c.center.lat.toFixed(4)}, ${c.center.lon.toFixed(4)}`;
+      const changesetCount = c.count;
+      
+      let fColor = 'rgb(23, 107, 135)';
+      if (gap > 0) {
+        var color_pos = ((changesetCount - minVal) / gap) * 232;
+        var hue = (232 - color_pos) / 360;
+        var rgbconv = HSVtoRGB(hue, 1, 1);
+        var rgbcode = "rgb(" + rgbconv.r + "," + rgbconv.g + "," + rgbconv.b + ")";
+        fColor = rgbcode;
+      }
+      
+      const zIndex = (state.clusters.length - i) * 1000;
+
+      const marker = L.marker([c.center.lat, c.center.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="cluster-marker" style="background-color: ${fColor};">${c.index}</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13]
+        }),
+        zIndexOffset: zIndex
+      }).addTo(state.globalMap);
+
+      marker.bindPopup(`<b>Cluster ${c.index}</b><br>${esc(cachedAddr)}<br><b>${changesetCount}</b> changesets`);
+      state.clusterMarkers.push(marker);
+      bounds.push([c.center.lat, c.center.lon]);
+    }
+
+    if(bounds.length){
+      state.globalMap.fitBounds(bounds, {padding: [50, 50], maxZoom: 12});
+    }
+  }
+  function renderClusters(){
+    const root=$('clusters'); root.innerHTML='';
+    if(!state.clusters.length){root.innerHTML='<div class="empty" style="grid-column:1/-1;">No changesets with a usable bounding box in the loaded results.</div>';return;}
+    $('clusterNote').textContent=`${$('threshold').selectedOptions[0].text} threshold · approximate centres`;
+    
+    state.clusters.forEach(c=>{
+      const first=c.members[0], last=c.members[c.members.length-1];
+      const box=document.createElement('article');box.className='cluster';
+      const ids=c.members.map(x=>`<a href="https://www.openstreetmap.org/changeset/${attr(x.id)}" target="_blank" rel="noopener">#${attr(x.id)}</a>`).join('');
+      const cachedAddr = state.addressCache.get(c.addressKey);
+      
+      box.innerHTML=`
+        <div>
+          <div class="cluster-head">
+            <div>
+              <h3 id="cluster-title-${c.index}" data-index="${c.index}">Cluster ${c.index}: ${esc(cachedAddr || 'Unresolved location')}</h3>
+              <div class="sub">${c.center.lat.toFixed(5)}, ${c.center.lon.toFixed(5)} · ${c.count} changeset${c.count===1?'':'s'} · ${humanDate(last.created)} to ${humanDate(first.created)}</div>
+            </div>
+            <span class="pill">${c.members.reduce((s,x)=>s+x.changes,0).toLocaleString()} changes</span>
+          </div>
+          ${!cachedAddr ? `<button class="secondary photon-btn" style="margin-top:10px;font-size:12px;min-height:32px;width:100%;" data-lat="${c.center.lat}" data-lon="${c.center.lon}" data-key="${c.addressKey}">Call Photon API for Address</button>` : ''}
+          <div class="ids">${ids}</div>
+        </div>
+      `;
+      root.appendChild(box);
+    });
+
+    root.querySelectorAll('.photon-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const lat = parseFloat(btn.dataset.lat);
+        const lon = parseFloat(btn.dataset.lon);
+        const key = btn.dataset.key;
+        const clusterCard = btn.closest('.cluster');
+        const titleEl = clusterCard.querySelector('h3');
+        fetchPhotonAddress(lat, lon, key, btn, titleEl);
+      });
+    });
+
+    updateGlobalMapMarkers();
+  }
+  async function loadChangesetDetail(csId, containerEl, btnEl){
+    btnEl.disabled = true;
+    btnEl.textContent = 'Loading details...';
+    try {
+      const res = await fetch(`https://api.openstreetmap.org/api/0.6/changeset/${csId}/download`);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const xmlText = await res.text();
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(xmlText, 'text/xml');
+
+      const actions = ['create', 'modify', 'delete'];
+      const allElements = [];
+      const nodesToPlot = [];
+
+      actions.forEach(action => {
+        const actionNodes = xml.getElementsByTagName(action);
+        if(actionNodes.length > 0) {
+          for(let nodeGroup of actionNodes) {
+            for(let el of nodeGroup.children) {
+              const type = el.tagName;
+              const id = el.getAttribute('id');
+              const lat = el.getAttribute('lat');
+              const lon = el.getAttribute('lon');
+              const tags = el.getElementsByTagName('tag');
+              const tagPairs = [];
+              for(let t of tags) {
+                tagPairs.push(`${t.getAttribute('k')}=${t.getAttribute('v')}`);
+              }
+              if(lat && lon){
+                nodesToPlot.push({lat: parseFloat(lat), lon: parseFloat(lon), label: `${action} ${type} #${id}`, action: action});
+              }
+              allElements.push({
+                action: action,
+                type: type,
+                id: id,
+                tags: tagPairs
+              });
+            }
+          }
+        }
+      });
+
+      allElements.sort((a, b) => b.tags.length - a.tags.length);
+
+      let html = '<div class="detail-box"><strong>Changeset Elements & Tag Changes:</strong>';
+      if(allElements.length > 0) {
+        html += '<div class="element-flex-container">';
+        allElements.forEach(el => {
+          const prefix = el.type === 'node' ? 'n' : el.type === 'way' ? 'w' : 'r';
+          const bgClass = el.action === 'create' ? 'action-create' : el.action === 'modify' ? 'action-modify' : 'action-delete';
+          const tagsStr = el.tags.length > 0 ? el.tags.join('<br>') : '<i>(no tags)</i>';
+          html += `
+            <div class="element-card ${bgClass}">
+              <div class="el-id">${prefix}${el.id}</div>
+              <div class="el-tags">${tagsStr}</div>
+            </div>
+          `;
+        });
+        html += '</div>';
+      } else {
+        html += '<p>No detailed element changes found or format unsupported.</p>';
+      }
+      html += '</div>';
+
+      containerEl.innerHTML = html;
+      btnEl.textContent = 'Details loaded';
+
+      if(nodesToPlot.length > 0 && state.changesetMaps[csId]) {
+        const map = state.changesetMaps[csId];
+        if(state.changesetLayers[csId]?.elementsGroup) {
+          state.changesetLayers[csId].elementsGroup.clearLayers();
+        } else {
+          state.changesetLayers[csId] = state.changesetLayers[csId] || {};
+          state.changesetLayers[csId].elementsGroup = L.layerGroup().addTo(map);
+        }
+        nodesToPlot.forEach(n => {
+          const dotColor = n.action === 'create' ? '#24724c' : n.action === 'modify' ? '#d68910' : '#a12b2b';
+          L.circleMarker([n.lat, n.lon], {
+            radius: 6,
+            fillColor: dotColor,
+            color: '#ffffff',
+            weight: 1.5,
+            opacity: 1,
+            fillOpacity: 0.9
+          }).bindPopup(esc(n.label)).addTo(state.changesetLayers[csId].elementsGroup);
+        });
+      }
+    } catch(e) {
+      btnEl.disabled = false;
+      btnEl.textContent = 'See more detail';
+      containerEl.innerHTML = `<div class="detail-box" style="color:var(--red);">Failed to load details: ${esc(e.message)}</div>`;
+    }
+  }
+  function toggleChangesetMap(csId, bbox, mapContainerEl, toggleBtnEl){
+    const isHidden = mapContainerEl.classList.contains('hidden');
+    if(isHidden){
+      mapContainerEl.classList.remove('hidden');
+      toggleBtnEl.textContent = 'Hide map';
+      if(!state.changesetMaps[csId]){
+        const map = L.map(mapContainerEl).setView([0,0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        state.changesetMaps[csId] = map;
+
+        if(bbox){
+          const bounds = [[bbox.minLat, bbox.minLon], [bbox.maxLat, bbox.maxLon]];
+          const rect = L.rectangle(bounds, {color: '#176b87', weight: 2, fillOpacity: 0.15});
+          rect.addTo(map);
+          map.fitBounds(bounds, {padding: [30, 30]});
+          state.changesetLayers[csId] = { rect };
+        } else {
+          map.setView([0,0], 2);
+        }
+      } else {
+        setTimeout(() => { state.changesetMaps[csId].invalidateSize(); }, 100);
+      }
+    } else {
+      mapContainerEl.classList.add('hidden');
+      toggleBtnEl.textContent = 'Show on map';
+    }
+  }
+  function renderChangesets(){
+    const root=$('changesets');root.innerHTML='';
+    const filterVal = $('clusterFilter').value;
+    
+    let itemsToRender = [...state.items];
+    if (filterVal !== 'all') {
+      const targetClusterIdx = Number(filterVal);
+      itemsToRender = itemsToRender.filter(cs => cs.clusterIndex === targetClusterIdx);
+    }
+    itemsToRender.sort((a,b)=>Date.parse(b.created)-Date.parse(a.created));
+
+    $('listNote').textContent=`Showing ${itemsToRender.length} of ${state.items.length} loaded changesets`;
+    
+    if(itemsToRender.length === 0) {
+      root.innerHTML = '<div class="empty">No changesets match the selected cluster filter.</div>';
+    }
+
+    for(const cs of itemsToRender){
+      const box=document.createElement('article');box.className='changeset';
+      const bboxStr = cs.bbox ? `${cs.bbox.minLat.toFixed(5)}, ${cs.bbox.minLon.toFixed(5)} to ${cs.bbox.maxLat.toFixed(5)}, ${cs.bbox.maxLon.toFixed(5)}` : 'Not provided';
+      const metadata=[
+        ['Created by',cs.createdBy],['Source',cs.source],['Host',cs.host],['Imagery used',cs.imagery],
+        ['Bounding box', `${bboxStr} ${cs.bbox ? `<button class="secondary show-map-btn" style="font-size:11px;padding:2px 8px;min-height:24px;margin-left:6px;display:inline-block;" data-id="${cs.id}">Show on map</button>` : ''}`],
+        ['Cluster', cs.clusterIndex ? `Cluster #${cs.clusterIndex}` : 'Unassigned']
+      ];
+      const details=metadata.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${v?v:'—'}</dd></div>`).join('');
+      const tags=Object.entries(cs.tags).filter(([k])=>!['comment','created_by','source','host','imagery_used','imagery','imagery:source','background'].includes(k)).slice(0,8);
+      const counts = `<span class="count">${cs.changes.toLocaleString()} total element changes</span>` +
+        (cs.createdCount != null ? `<span class="count">Created: ${cs.createdCount.toLocaleString()}</span>` : '') +
+        (cs.modifiedCount != null ? `<span class="count">Modified: ${cs.modifiedCount.toLocaleString()}</span>` : '') +
+        (cs.deletedCount != null ? `<span class="count">Deleted: ${cs.deletedCount.toLocaleString()}</span>` : '');
+      
+      box.innerHTML=`
+        <div class="change-top">
+          <div><a href="https://www.openstreetmap.org/changeset/${attr(cs.id)}" target="_blank" rel="noopener">Changeset #${esc(cs.id)}</a> · ${cs.open?'<span class="pill">Open</span>':''}</div>
+          <time class="time" datetime="${attr(cs.created)}" title="${attr(fmtExact(cs.created))}">${esc(relative(cs.created))}</time>
+        </div>
+        <div class="comment">${esc(cs.comment)}</div>
+        <div class="counts">${counts}</div>
+        <dl class="meta">${details}</dl>
+        <div id="cs-map-wrap-${cs.id}" class="cs-map hidden"></div>
+        ${tags.length?`<div class="counts" style="margin-top:10px;">${tags.map(([k,v])=>`<span class="count">${esc(k)}: ${esc(v)}</span>`).join('')}</div>`:''}
+        <div style="margin-top:12px;">
+          <button class="secondary detail-btn" style="font-size:12px;min-height:34px;" data-id="${cs.id}">See more detail</button>
+        </div>
+        <div class="detail-container"></div>
+      `;
+      root.appendChild(box);
+    }
+
+    root.querySelectorAll('.show-map-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const csId = btn.dataset.id;
+        const csItem = state.items.find(x => x.id === csId);
+        const card = btn.closest('.changeset');
+        const mapEl = card.querySelector(`#cs-map-wrap-${csId}`);
+        toggleChangesetMap(csId, csItem.bbox, mapEl, btn);
+      });
+    });
+
+    root.querySelectorAll('.detail-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const csId = btn.dataset.id;
+        const changesetCard = btn.closest('.changeset');
+        const containerEl = changesetCard.querySelector('.detail-container');
+        loadChangesetDetail(csId, containerEl, btn);
+      });
+    });
+
+    $('changesSection').classList.toggle('hidden',!state.items.length);$('loadMore').disabled=state.loading || !state.oldest;
+    $('loadMore').textContent=state.loading?'Loading…':state.oldest?'Load older changesets':'No older changesets available';
+  }
+  function render(){renderSummary();renderClusters();renderChangesets();}
+  
+  $('clusterFilter').addEventListener('change', () => {
+    renderChangesets();
+  });
+
+  async function loadInitial(username){
+    state.user=username;state.uid=null;state.items=[];state.seen=new Set();state.clusters=[];state.oldest=null;state.cursorEnd=null;state.addressCache.clear();state.changesetMaps={};state.changesetLayers={};
+    $('summary').classList.add('hidden');$('clustersSection').classList.remove('hidden');$('changesSection').classList.add('hidden');
+    $('clusters').innerHTML='';$('changesets').innerHTML='';
+    await loadBatch(true);
+  }
+  async function loadBatch(initial=false){
+    if(state.loading)return;state.loading=true;$('searchBtn').disabled=true;$('loadMore').disabled=true;
+    try{
+      let url;
+      if(initial){
+        url=`https://api.openstreetmap.org/api/0.6/changesets.json?display_name=${encodeURIComponent(state.user)}&limit=100`;
+      }else{
+        if(!state.oldest){status('No older changesets available.');return;}
+        const endMs=Date.parse(state.cursorEnd || state.oldest)-1000;
+        const startMs=Math.max(Date.parse('2005-01-01T00:00:00Z'),endMs-7*24*60*60*1000);
+        const start=new Date(startMs).toISOString();
+        const end=new Date(endMs).toISOString();
+        state.cursorEnd=start;
+        const who=state.uid?`user=${encodeURIComponent(state.uid)}`:`display_name=${encodeURIComponent(state.user)}`;
+        url=`https://api.openstreetmap.org/api/0.6/changesets.json?${who}&time=${encodeURIComponent(start)},${encodeURIComponent(end)}&limit=100`;
+      }
+      status(initial?`Fetching changesets for “${state.user}”…`:'Fetching older changesets…');
+      const data=await api(url);
+      const rawItems=Array.isArray(data)?data:(data.changesets||data.elements||[]);
+      if(rawItems.length && rawItems[0].uid != null) state.uid=rawItems[0].uid;
+      if(!rawItems.length && initial){status(`No changesets found for “${state.user}”. Check the username spelling.`,true);$('clusters').innerHTML='<div class="empty">No changesets returned.</div>';return;}
+      let added=0;
+      for(const raw of rawItems){
+        const cs=normalize(raw);
+        if(!cs.id||state.seen.has(cs.id))continue;
+        state.seen.add(cs.id);state.items.push(cs);added++;
+      }
+      state.items.sort((a,b)=>Date.parse(b.created)-Date.parse(a.created));
+      const dated=state.items.map(x=>x.created).filter(Boolean).sort((a,b)=>Date.parse(a)-Date.parse(b));
+      state.oldest=dated[0]||null;
+      if(initial) state.cursorEnd=state.oldest;
+      state.hasMore=rawItems.length>=100 && added>0;
+      buildClusters();render();
+      status(`Loaded ${state.items.length} changesets for “${state.user}”.${added===0?' No additional older results were added.':''}`);
+      if(!initial && Date.parse(state.cursorEnd || '2005-01-01T00:00:00Z') <= Date.parse('2005-01-01T00:00:00Z')) state.oldest=null;
+      if(!initial && !rawItems.length) status(`No changesets in that week. You can load the preceding week; ${state.items.length} changesets remain loaded.`);
+    }catch(e){
+      status(`Could not load changesets: ${e.message}. Check the username, network connection, or API availability.`,true);
+    }finally{
+      state.loading=false;$('searchBtn').disabled=false;renderChangesets();
+    }
+  }
+  $('searchForm').addEventListener('submit', async e=>{
+    e.preventDefault();const username=$('username').value.trim();
+    if(!username)return;
+    await loadInitial(username);
+  });
+  $('loadMore').addEventListener('click',()=>loadBatch(false));$('threshold').addEventListener('change',()=>{if(state.items.length){buildClusters();render();}});
+  setInterval(()=>{document.querySelectorAll('time[datetime]').forEach(t=>t.textContent=relative(t.dateTime));},60000);
+})();
+</script>
+</body>
+</html>
