@@ -292,7 +292,7 @@ form{display:grid;grid-template-columns:minmax(0,1fr) 135px auto;gap:10px;align-
             <span class="pill">${c.members.reduce((s,x)=>s+x.changes,0).toLocaleString()} changes</span>
           </div>
           ${!cachedAddr ? `<button class="secondary photon-btn" style="margin-top:10px;font-size:12px;min-height:32px;width:100%;" data-lat="${c.center.lat}" data-lon="${c.center.lon}" data-key="${c.addressKey}">Call Photon API for Address</button>` : ''}
-          <div class="ids">${ids}</div>
+          <div class="ids"></div>
         </div>
       `;
       root.appendChild(box);
