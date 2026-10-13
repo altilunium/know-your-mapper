@@ -26,6 +26,26 @@ form{display:grid;grid-template-columns:minmax(0,1fr) 135px auto;gap:10px;align-
 .action-delete{background-color:#f8d7da;border-color:#f5c6cb;color:#721c24}
 .el-id{font-size:10px;font-weight:700;opacity:0.85;margin-bottom:2px;text-transform:uppercase}
 .el-tags{font-family:monospace;font-size:11px;line-height:1.4}
+.ticker-container{display:flex;align-items:center;background:var(--blue2);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:12px;padding:6px 12px;font-size:13px}
+.ticker-label{font-weight:750;color:var(--blue);margin-right:12px;white-space:nowrap;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
+.ticker-content{overflow:hidden;white-space:nowrap;flex-grow:1;position:relative}
+.ticker-running{display:inline-block;white-space:nowrap;animation:tickerScroll 100s linear infinite}
+
+@keyframes tickerScroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+.ticker-running:hover{animation-play-state:paused}
+.ticker-item{display:inline-block;cursor:pointer;color:var(--ink)}
+.ticker-item:hover .mapper-name{color:var(--blue);text-decoration:underline}
+.mapper-name{font-weight:700}
+.mapper-time{color:var(--muted);font-size:12px;margin-left:4px}
+@keyframes tickerScroll{0%{transform:translate3d(0,0,0)}100%{transform:translate3d(-50%,0,0)}}
 @media(max-width:640px){main{padding:20px 12px 40px}form{grid-template-columns:1fr 1fr}form .name{grid-column:1/-1}form button{grid-column:1/-1}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.meta{grid-template-columns:1fr}.change-top{align-items:start;flex-direction:column}.time{white-space:normal}.panel{padding:14px}}
 </style>
 </head>
@@ -44,6 +64,12 @@ form{display:grid;grid-template-columns:minmax(0,1fr) 135px auto;gap:10px;align-
       <button id="searchBtn" type="submit">Load changesets</button>
     </form>
     <div id="status" class="status" role="status">Enter an OSM username to begin. The app uses the public OSM API and interactive maps.</div>
+    <div id="liveMappersTicker" class="ticker-container hidden">
+      <div class="ticker-label">Live Mappers</div>
+      <div class="ticker-content">
+        <div id="tickerTrack" class="ticker-running">Loading active mappers...</div>
+      </div>
+    </div>
   </section>
 
   <section id="summary" class="panel hidden">
@@ -560,6 +586,52 @@ form{display:grid;grid-template-columns:minmax(0,1fr) 135px auto;gap:10px;align-
       state.loading=false;$('searchBtn').disabled=false;renderChangesets();
     }
   }
+
+  async function fetchLatestMappers(){
+    try{
+      const res = await fetch('https://api.openstreetmap.org/api/0.6/changesets.json?limit=40');
+      if(!res.ok) return;
+      const data = await res.json();
+      const rawItems = Array.isArray(data) ? data : (data.changesets || data.elements || []);
+      const mapperMap = new Map();
+      for(const item of rawItems){
+        const username = item.user;
+        const createdAt = item.created_at;
+        if(username && createdAt){
+          if(!mapperMap.has(username) || Date.parse(createdAt) > Date.parse(mapperMap.get(username))){
+            mapperMap.set(username, createdAt);
+          }
+        }
+      }
+      const mappers = Array.from(mapperMap.entries()).map(([user, time]) => ({user, time}));
+      mappers.sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
+      
+      const tickerContainer = $('liveMappersTicker');
+      const tickerTrack = $('tickerTrack');
+      if(mappers.length > 0){
+        tickerContainer.classList.remove('hidden');
+        const itemsHtml = mappers.map(m => `
+          <span class="ticker-item" data-username="${attr(m.user)}">
+            <span class="mapper-name">${esc(m.user)}</span>
+            <span class="mapper-time">(${esc(relative(m.time))})</span>
+          </span>
+        `).join('<span style="margin:0 15px; color:var(--line);">•</span>');
+        
+        tickerTrack.innerHTML = itemsHtml + '<span style="margin:0 15px; color:var(--line);">•</span>' + itemsHtml;
+        
+        tickerTrack.querySelectorAll('.ticker-item').forEach(el => {
+          el.addEventListener('click', () => {
+            const u = el.dataset.username;
+            $('username').value = u;
+            loadInitial(u);
+          });
+        });
+      }
+    }catch(e){
+      console.error('Failed to load live mappers ticker', e);
+    }
+  }
+
   $('searchForm').addEventListener('submit', async e=>{
     e.preventDefault();const username=$('username').value.trim();
     if(!username)return;
@@ -567,6 +639,8 @@ form{display:grid;grid-template-columns:minmax(0,1fr) 135px auto;gap:10px;align-
   });
   $('loadMore').addEventListener('click',()=>loadBatch(false));$('threshold').addEventListener('change',()=>{if(state.items.length){buildClusters();render();}});
   setInterval(()=>{document.querySelectorAll('time[datetime]').forEach(t=>t.textContent=relative(t.dateTime));},60000);
+
+  fetchLatestMappers();
 })();
 </script>
 </body>
